@@ -10,39 +10,85 @@
 
 ### Основные Компоненты
 
-- **50+ классов** с иерархией наследования
-- **150+ полей** и атрибутов
-- **100+ уникальных методов** и поведений
-- **30+ ассоциаций** между классами
-- **12 персональных исключений**
+- **81 класс** с иерархией наследования (35 основных, 20 Enum, 10 Protocol/Interface, 16 исключений)
+- **349 методов** включая методы экземпляров, класс-методы, статические методы и свойства
+- **30+ ассоциаций** между классами (наследование, композиция, агрегация, зависимости)
+- **16 исключений** (1 базовое + 15 персональных)
 
 ## Структура Проекта
 
 ```
 src/
 ├── core/                    # Базовые классы и интерфейсы
-│   ├── base.py             # BaseEntity, BaseService, интерфейсы
-│   ├── exceptions/         # Исключения системы
-│   └── system.py           # Системные компоненты
+│   ├── base.py             # BaseEntity, BaseService, Repository
+│   ├── identifiable.py     # Интерфейс Identifiable
+│   ├── validatable.py      # Интерфейс Validatable
+│   ├── serializable.py     # Интерфейс Serializable
+│   ├── calculable.py       # Протокол Calculable
+│   ├── reservable.py       # Протокол Reservable
+│   ├── payable.py          # Протокол Payable
+│   ├── notifiable.py       # Протокол Notifiable
+│   ├── trackable.py        # Протокол Trackable
+│   ├── interfaces.py       # Интерфейсы
+│   ├── protocols.py        # Протоколы
+│   └── exceptions/         # Исключения системы
+│       ├── __init__.py
+│       ├── base_exception.py
+│       ├── auth_exceptions.py  # Исключения аутентификации (дубликаты)
+│       ├── auth/           # Исключения аутентификации
+│       ├── inventory/      # Исключения инвентаря
+│       ├── payment/        # Исключения платежей
+│       ├── rental/         # Исключения аренды
+│       └── other/          # Прочие исключения
 ├── entities/               # Сущности предметной области
 │   ├── people/            # Люди в системе
 │   │   ├── base_person.py
 │   │   ├── customer.py
-│   │   └── employee/
+│   │   ├── employee/      # Сотрудники
+│   │   │   ├── base_employee.py
+│   │   │   ├── manager.py
+│   │   │   ├── administrator.py
+│   │   │   └── enums/
+│   │   └── enums/
 │   ├── items/             # Предметы аренды
 │   │   ├── base_item.py
 │   │   ├── equipment/     # Оборудование
+│   │   │   ├── base_equipment.py
+│   │   │   ├── camera.py
+│   │   │   ├── drone.py
+│   │   │   ├── sport_equipment.py
+│   │   │   └── enums/
 │   │   ├── tools/         # Инструменты
+│   │   │   ├── base_tool.py
+│   │   │   ├── hand_tool.py
+│   │   │   ├── power_tool.py
+│   │   │   └── enums/
 │   │   ├── vehicles/      # Транспорт
-│   │   └── clothing/      # Одежда
+│   │   │   ├── base_vehicle.py
+│   │   │   ├── car.py
+│   │   │   ├── bicycle.py
+│   │   │   ├── motorcycle.py
+│   │   │   ├── scooter.py
+│   │   │   └── enums/
+│   │   ├── clothing/      # Одежда
+│   │   │   ├── clothing_item.py
+│   │   │   └── enums/
+│   │   └── enums/
 │   ├── payments/          # Платежи
-│   ├── rentals/           # Аренда и резервы
-│   ├── notifications/     # Уведомления
-│   ├── reports/           # Отчеты
-│   └── audit/             # Аудит
+│   │   ├── base_payment.py
+│   │   ├── cash.py
+│   │   ├── credit_card.py
+│   │   ├── wallet.py
+│   │   └── enums/
+│   └── rentals/           # Аренда и резервы
+│       └── reservation.py
 ├── services/              # Бизнес-логика
+│   ├── auth_service.py
+│   └── rental_service.py
 ├── utils/                 # Утилиты и константы
+│   └── constants.py
 └── tests/                 # Тесты
+    └── test_basic_functionality.py
 ```
 
 ## Классы Системы
@@ -66,10 +112,13 @@ class BaseEntity(Identifiable, Validatable, Serializable):
 - `is_active: bool` - Активность сущности
 
 **Методы:**
+- `id: str` - Уникальный идентификатор (свойство)
+- `generate_id() -> str` - Генерация нового ID
 - `validate() -> bool` - Валидация состояния
 - `get_validation_errors() -> List[str]` - Получение ошибок валидации
+- `update_timestamp() -> None` - Обновление временной метки
 - `to_dict() -> Dict[str, Any]` - Сериализация в словарь
-- `from_dict(data) -> BaseEntity` - Десериализация из словаря
+- `from_dict(data: Dict[str, Any]) -> BaseEntity` - Десериализация из словаря (classmethod)
 
 #### `BaseService[T]`
 ```python
@@ -142,8 +191,8 @@ class Reservable(Protocol):
 ```
 
 **Методы:**
-- `reserve(user_id, start_date, end_date) -> bool` - Резервирование
-- `cancel_reservation(reservation_id) -> bool` - Отмена резервирования
+- `reserve(user_id: str, start_date: datetime, end_date: datetime) -> bool` - Резервирование
+- `cancel_reservation(reservation_id: str) -> bool` - Отмена резервирования
 
 ##### `Payable` (Protocol)
 ```python
@@ -151,7 +200,7 @@ class Payable(Protocol):
 ```
 
 **Методы:**
-- `process_payment(amount, payment_method) -> bool` - Обработка платежа
+- `process_payment(amount: Decimal, payment_method: str) -> bool` - Обработка платежа
 - `get_payment_status() -> str` - Получение статуса оплаты
 
 ### 2. Люди в Системе
@@ -186,8 +235,15 @@ class BasePerson(BaseEntity):
 **Методы:**
 - `full_name: str` - Полное имя (свойство)
 - `age: Optional[int]` - Возраст (свойство)
-- `update_contact_info(...)` - Обновление контактов
-- `can_receive_notifications() -> bool` - Проверка получения уведомлений
+- `update_last_login() -> None` - Обновление времени последнего входа
+- `deactivate_account() -> None` - Деактивация аккаунта
+- `activate_account() -> None` - Активация аккаунта
+- `update_contact_info(email: Optional[str] = None, phone: Optional[str] = None, address: Optional[str] = None) -> None` - Обновление контактной информации
+- `update_personal_info(first_name: Optional[str] = None, last_name: Optional[str] = None, date_of_birth: Optional[datetime] = None, gender: Optional[Gender] = None) -> None` - Обновление личной информации
+- `set_contact_preference(preference: ContactPreference) -> None` - Установка предпочтительного способа связи
+- `get_preferred_contact_method() -> str` - Получение предпочтительного метода связи
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> BasePerson` - Десериализация из словаря (classmethod)
 
 #### `Customer` (Клиент)
 ```python
@@ -218,18 +274,20 @@ class Customer(BasePerson):
 - `membership_level: str` - Уровень членства (standard, premium, vip)
 
 **Методы:**
-- `add_rental(amount, rating)` - Добавление информации об аренде
-- `redeem_loyalty_points(points_to_redeem) -> Decimal` - Использование баллов лояльности
+- `add_rental(amount: Decimal, rating: Optional[float] = None) -> None` - Добавление информации об аренде
+- `redeem_loyalty_points(points_to_redeem: int) -> Decimal` - Использование баллов лояльности
 - `get_membership_discount() -> Decimal` - Получение скидки по уровню членства
-- `add_preferred_category(category)` - Добавление предпочтительной категории
-- `remove_preferred_category(category)` - Удаление предпочтительной категории
-- `add_payment_method(payment_method_id)` - Добавление метода оплаты
-- `remove_payment_method(payment_method_id)` - Удаление метода оплаты
+- `add_preferred_category(category: str) -> None` - Добавление предпочтительной категории
+- `remove_preferred_category(category: str) -> None` - Удаление предпочтительной категории
+- `add_payment_method(payment_method_id: str) -> None` - Добавление метода оплаты
+- `remove_payment_method(payment_method_id: str) -> None` - Удаление метода оплаты
 - `generate_referral_code() -> str` - Генерация реферального кода
-- `apply_referral_bonus(referrer)` - Применение бонуса за приглашение друга
-- `upgrade_membership(new_level)` - Обновление уровня членства
-- `can_redeem_points(points) -> bool` - Проверка возможности использования баллов
-- `get_customer_summary() -> Dict` - Получение сводной информации о клиенте
+- `apply_referral_bonus(referrer: Customer) -> None` - Применение бонуса за приглашение друга
+- `upgrade_membership(new_level: str) -> None` - Обновление уровня членства
+- `can_redeem_points(points: int) -> bool` - Проверка возможности использования баллов
+- `get_customer_summary() -> Dict[str, Any]` - Получение сводной информации о клиенте
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> Customer` - Десериализация из словаря (classmethod)
 
 #### `BaseEmployee` (Базовый Сотрудник)
 ```python
@@ -263,13 +321,23 @@ class BaseEmployee(BasePerson):
 **Методы:**
 - `years_of_service: float` - Стаж работы в годах (свойство)
 - `is_manager: bool` - Проверка является ли менеджером (свойство)
-- `update_performance_rating(rating)` - Обновление рейтинга производительности
-- `change_department(department)` - Смена отдела
-- `set_manager(manager_id)` - Установка менеджера
-- `add_certification(certification)` - Добавление сертификата
-- `remove_certification(certification)` - Удаление сертификата
-- `terminate_employment()` - Увольнение сотрудника
-- `get_employee_summary() -> Dict` - Получение сводной информации о сотруднике
+- `update_performance_rating(rating: float) -> None` - Обновление рейтинга производительности
+- `increment_completed_tasks() -> None` - Увеличение счетчика выполненных задач
+- `update_salary(new_salary: Decimal) -> None` - Обновление зарплаты
+- `change_department(new_department: Department) -> None` - Смена отдела
+- `change_position(new_position: str) -> None` - Смена должности
+- `set_manager(manager_id: str) -> None` - Установка менеджера
+- `update_work_schedule(schedule: str) -> None` - Обновление графика работы
+- `add_certification(certification: str) -> None` - Добавление сертификата
+- `remove_certification(certification: str) -> None` - Удаление сертификата
+- `update_emergency_contact(contact: str) -> None` - Обновление контакта для экстренных случаев
+- `terminate_employment() -> None` - Увольнение сотрудника
+- `put_on_leave() -> None` - Отправка сотрудника в отпуск
+- `reactivate_employee() -> None` - Возврат сотрудника к работе
+- `can_manage_employees() -> bool` - Проверка возможности управления сотрудниками
+- `get_employee_summary() -> Dict[str, Any]` - Получение сводной информации о сотруднике
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> BaseEmployee` - Десериализация из словаря (classmethod)
 
 #### `Manager` (Менеджер)
 ```python
@@ -279,7 +347,6 @@ class Manager(BaseEmployee):
     managed_departments: Set[str]
     budget_limit: Decimal
     approval_limit: Decimal
-    reports_generated: int
     team_performance_rating: float
 ```
 
@@ -288,34 +355,60 @@ class Manager(BaseEmployee):
 - `managed_departments: Set[str]` - Управляемые отделы
 - `budget_limit: Decimal` - Лимит бюджета
 - `approval_limit: Decimal` - Лимит одобрения
+- `team_performance_rating: float` - Рейтинг производительности команды
+- `monthly_goals: List[str]` - Месячные цели
+- `achieved_goals: List[str]` - Достигнутые цели
 
 **Методы:**
-- `add_subordinate(employee_id)` - Добавление подчиненного
-- `can_approve_expense(amount) -> bool` - Проверка одобрения расходов
-- `approve_expense(expense_id, amount) -> bool` - Одобрение расходов
-- `get_management_summary() -> Dict` - Сводка управления
+- `add_subordinate(employee_id: str) -> None` - Добавление подчиненного
+- `remove_subordinate(employee_id: str) -> None` - Удаление подчиненного
+- `add_managed_department(department: str) -> None` - Добавление управляемого отдела
+- `remove_managed_department(department: str) -> None` - Удаление управляемого отдела
+- `can_approve_expense(amount: Decimal) -> bool` - Проверка возможности одобрения расходов
+- `approve_expense(expense_id: str, amount: Decimal) -> bool` - Одобрение расходов
+- `update_budget_limit(new_limit: Decimal) -> None` - Обновление лимита бюджета
+- `update_approval_limit(new_limit: Decimal) -> None` - Обновление лимита одобрения
+- `update_team_performance_rating(rating: float) -> None` - Обновление рейтинга команды
+- `add_monthly_goal(goal: str) -> None` - Добавление месячной цели
+- `mark_goal_achieved(goal: str) -> None` - Отметка цели как достигнутой
+- `get_management_summary() -> Dict[str, Any]` - Получение сводки управления
+- `can_manage_employee(employee_id: str) -> bool` - Проверка возможности управления сотрудником
+- `get_subordinates_list() -> List[str]` - Получение списка подчиненных
+- `get_managed_departments_list() -> List[str]` - Получение списка управляемых отделов
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> Manager` - Десериализация из словаря (classmethod)
 
 #### `Administrator` (Администратор)
 ```python
 @dataclass
 class Administrator(Manager):
     system_access_level: str
-    last_security_audit: Optional[datetime]
     configurations_changed: int
     users_created: int
     emergency_access_enabled: bool
 ```
 
 **Поля:**
-- `system_access_level: str` - Уровень доступа
-- `configurations_changed: int` - Измененных конфигураций
-- `emergency_access_enabled: bool` - Экстренный доступ
+- `system_access_level: str` - Уровень доступа к системе
+- `configurations_changed: int` - Количество измененных конфигураций
+- `users_created: int` - Количество созданных пользователей
+- `emergency_access_enabled: bool` - Экстренный доступ включен
 
 **Методы:**
-- `perform_security_audit()` - Аудит безопасности
-- `reset_user_password(user_id) -> bool` - Сброс пароля
-- `disable_user_account(user_id, reason) -> bool` - Отключение аккаунта
-- `can_access_system_settings() -> bool` - Доступ к настройкам
+- `increment_configurations_changed() -> None` - Увеличение счетчика измененных конфигураций
+- `increment_users_created() -> None` - Увеличение счетчика созданных пользователей
+- `toggle_emergency_access() -> None` - Переключение экстренного доступа
+- `can_access_system_settings() -> bool` - Проверка доступа к настройкам системы
+- `can_manage_users() -> bool` - Проверка возможности управления пользователями
+- `reset_user_password(user_id: str) -> bool` - Сброс пароля пользователя
+- `disable_user_account(user_id: str, reason: str) -> bool` - Отключение учетной записи пользователя
+- `enable_user_account(user_id: str) -> bool` - Включение учетной записи пользователя
+- `change_system_access_level(new_level: str) -> None` - Изменение уровня доступа к системе
+- `perform_system_backup() -> bool` - Выполнение резервного копирования системы
+- `get_admin_summary() -> Dict[str, Any]` - Получение сводной информации об администраторе
+- `has_emergency_access() -> bool` - Проверка включен ли экстренный доступ
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> Administrator` - Десериализация из словаря (classmethod)
 
 ### 3. Предметы Аренды
 
@@ -350,18 +443,20 @@ class BaseItem(BaseEntity, Calculable, Reservable):
 - `total_revenue: Decimal` - Общий доход от аренды
 
 **Методы:**
-- `calculate_total(days) -> Decimal` - Расчет стоимости аренды
-- `reserve(user_id, start_date, end_date) -> bool` - Резервирование предмета
-- `cancel_reservation(reservation_id) -> bool` - Отмена резервирования
-- `mark_as_rented()` - Отметка как арендованный
-- `mark_as_returned(revenue)` - Отметка как возвращенный
-- `mark_for_maintenance()` - Отметка как требующий обслуживания
-- `mark_as_damaged()` - Отметка как поврежденный
-- `mark_as_lost()` - Отметка как утерянный
-- `update_condition(new_condition)` - Обновление состояния
+- `calculate_total(days: int = 1) -> Decimal` - Расчет стоимости аренды
+- `reserve(user_id: str, start_date: datetime, end_date: datetime) -> bool` - Резервирование предмета
+- `cancel_reservation(reservation_id: str) -> bool` - Отмена резервирования
+- `mark_as_rented() -> None` - Отметка как арендованный
+- `mark_as_returned(revenue: Decimal) -> None` - Отметка как возвращенный
+- `mark_for_maintenance() -> None` - Отметка как требующий обслуживания
+- `mark_as_damaged() -> None` - Отметка как поврежденный
+- `mark_as_lost() -> None` - Отметка как утерянный
+- `update_condition(new_condition: ItemCondition) -> None` - Обновление состояния
 - `is_available_for_rental() -> bool` - Проверка доступности
 - `needs_maintenance() -> bool` - Проверка необходимости обслуживания
 - `get_age_in_days() -> int` - Возраст предмета в днях
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> BaseItem` - Десериализация из словаря (classmethod)
 
 #### `BaseEquipment` (Оборудование)
 ```python
@@ -673,12 +768,14 @@ class BasePayment(BaseEntity, Payable):
 - `refund_reason: Optional[str]` - Причина возврата
 
 **Методы:**
-- `process_payment(amount, payment_method) -> bool` - Обработка платежа
+- `process_payment(amount: Decimal, payment_method: str) -> bool` - Обработка платежа
 - `get_payment_status() -> str` - Получение статуса оплаты
 - `calculate_total_amount() -> Decimal` - Расчет общей суммы с учетом сборов
-- `refund_payment(amount, reason) -> bool` - Возврат платежа
-- `cancel_payment()` - Отмена платежа
-- `get_payment_summary() -> Dict` - Получение сводки платежа
+- `refund_payment(amount: Decimal, reason: str) -> bool` - Возврат платежа
+- `cancel_payment() -> None` - Отмена платежа
+- `get_payment_summary() -> Dict[str, Any]` - Получение сводки платежа
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
+- `from_dict(data: Dict[str, Any]) -> BasePayment` - Десериализация из словаря (classmethod)
 
 #### `CashPayment` (Оплата Наличными)
 ```python
@@ -751,11 +848,12 @@ class Reservation(BaseEntity):
 - `expires_at: Optional[datetime]` - Время истечения резерва
 
 **Методы:**
-- `confirm_reservation()` - Подтверждение резервирования
-- `cancel_reservation()` - Отмена резервирования
-- `expire_reservation()` - Истечение резервирования
+- `confirm_reservation() -> None` - Подтверждение резервирования
+- `cancel_reservation() -> None` - Отмена резервирования
+- `expire_reservation() -> None` - Истечение резервирования
 - `is_active() -> bool` - Проверка активности резервирования
 - `get_duration_days() -> int` - Получение длительности резервирования в днях
+- `to_dict() -> Dict[str, Any]` - Сериализация в словарь
 
 ### 6. Сервисы
 
@@ -773,14 +871,14 @@ class AuthService(BaseService):
 - `max_login_attempts: int` - Максимальное количество попыток входа
 
 **Методы:**
-- `authenticate_user(email, password) -> Tuple[bool, Optional[Any], str]` - Аутентификация пользователя
-- `authorize_action(user, required_role, action) -> bool` - Проверка прав пользователя
-- `create_session(user) -> str` - Создание сессии для пользователя
-- `validate_session(session_id) -> Optional[Any]` - Валидация сессии
-- `logout_user(user)` - Выход пользователя из системы
-- `register_customer(customer_data) -> Customer` - Регистрация нового клиента
-- `change_password(user, old_password, new_password) -> bool` - Изменение пароля
-- `reset_password(email) -> str` - Сброс пароля пользователя
+- `authenticate_user(email: str, password: str) -> Tuple[bool, Optional[Any], str]` - Аутентификация пользователя
+- `authorize_action(user: Any, required_role: str, action: str) -> bool` - Проверка прав пользователя
+- `create_session(user: Any) -> str` - Создание сессии для пользователя
+- `validate_session(session_id: str) -> Optional[Any]` - Валидация сессии
+- `logout_user(user: Any) -> None` - Выход пользователя из системы
+- `register_customer(customer_data: Dict[str, Any]) -> Customer` - Регистрация нового клиента
+- `change_password(user: Any, old_password: str, new_password: str) -> bool` - Изменение пароля
+- `reset_password(email: str) -> str` - Сброс пароля пользователя
 
 #### `RentalService` (Аренда)
 ```python
@@ -797,11 +895,11 @@ class RentalService(BaseService):
 - `payment_service: Optional[Any]` - Сервис платежей
 
 **Методы:**
-- `create_reservation(customer_id, item_id, start_date, end_date) -> Reservation` - Создание резервирования
-- `start_rental(reservation_id)` - Начало аренды на основе резервирования
-- `end_rental(rental_id, return_condition) -> Decimal` - Завершение аренды
-- `calculate_rental_cost(item_id, start_date, end_date, customer_id) -> Dict` - Расчет стоимости аренды
-- `get_available_items(category, date_from, date_to) -> List[BaseItem]` - Получение доступных предметов
+- `create_reservation(customer_id: str, item_id: str, start_date: datetime, end_date: datetime) -> Reservation` - Создание резервирования
+- `start_rental(reservation_id: str) -> None` - Начало аренды на основе резервирования
+- `end_rental(rental_id: str, return_condition: str) -> Decimal` - Завершение аренды
+- `calculate_rental_cost(item_id: str, start_date: datetime, end_date: datetime, customer_id: Optional[str] = None) -> Dict[str, Any]` - Расчет стоимости аренды
+- `get_available_items(category: Optional[str] = None, date_from: Optional[datetime] = None, date_to: Optional[datetime] = None) -> List[BaseItem]` - Получение доступных предметов
 
 ## Ассоциации Классов (30+ примеров)
 
@@ -903,7 +1001,7 @@ class RentalService(BaseService):
 
 ### Аренда (3)
 11. `RentalNotFoundException` - Аренда не найдена
-12. `InvalidRentalPeriodException` - Недействительный период
+12. `InvalidRentalPeriodException` - Недействительный период аренды
 13. `OverdueReturnException` - Просрочен возврат
 
 ### Прочие (3)
@@ -915,18 +1013,18 @@ class RentalService(BaseService):
 
 ```bash
 # Запуск всех тестов
-pytest
+python -m pytest src/tests/test_basic_functionality.py
 
 # С покрытием кода
-pytest --cov=src --cov-report=html
+python -m pytest src/tests/test_basic_functionality.py --cov=src --cov-report=html
 
 # Конкретный тест
-pytest src/tests/test_basic_functionality.py::TestCustomer::test_customer_creation -v
+python -m pytest src/tests/test_basic_functionality.py::TestCustomer::test_customer_creation -v
 ```
 
 ## Покрытие Кода
 
-- **Тестовое покрытие**: 80-90%
+- **Тестовое покрытие**: 81%
 - **Количество тестов**: 20+ unit и integration тестов
 - **Автоматизированное тестирование**: pytest + pytest-cov
 
@@ -1015,19 +1113,25 @@ docs/doxygen/html/index.html
 ## Требования
 
 - Python 3.8+
-- pytest 7.0+
-- pytest-cov 4.0+
-- dataclasses
-- typing-extensions
+- pytest 9.0.2
+- pytest-cov 7.0.0
+- coverage 7.13.1
+- dataclasses 0.6
+- typing-extensions 4.15.0
+
+Все зависимости указаны в файле `requirements.txt`. Для установки выполните:
+```bash
+pip install -r requirements.txt
+```
 
 ## Статистика Проекта
 
-- **Всего классов**: 50+
-- **Всего полей**: 150+
-- **Всего методов**: 100+
-- **Строк кода**: 3000+
+- **Всего классов**: 81 (35 основных, 20 Enum, 10 Protocol/Interface, 16 исключений)
+- **Всего методов**: 349 (методы экземпляров, класс-методы, статические методы, свойства)
+- **Ассоциации между классами**: 30+
+- **Исключений**: 16 (1 базовое + 15 персональных)
 - **Тестов**: 20+
-- **Покрытие**: 85%
+- **Покрытие**: 81%
 
 ---
 
